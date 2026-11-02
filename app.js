@@ -79,6 +79,7 @@
       n: 0, correct: 0, streak: 0, best: 0, missed: new Map(), startedAt: Date.now(),
       timeLeft: SPRINT_SECS, timer: null, locked: false, current: null, advance: null, ended: false
     };
+    $('#problem').hidden = false; $('#divBoard').hidden = true;
     const prog = $('#progress');
     prog.classList.toggle('timer', mode === 'sprint');
     prog.classList.remove('low');
@@ -106,6 +107,7 @@
   function nextQuestion() {
     const s = session; if (!s || s.ended) return;
     clearTimeout(s.advance);
+    if (s.kind === 'div') return nextDivProblem();
     if (s.mode === 'round' && s.n >= ROUND_LEN) return finish();
     const f = pickFact();
     // random order of factors so kids see both 3x7 and 7x3
@@ -142,6 +144,7 @@
   function submit() {
     const s = session; if (!s || s.ended) return;
     if (s.locked) { if (s.waitingNext) { s.waitingNext = false; nextQuestion(); } return; }
+    if (s.kind === 'div') return submitDiv();
     const inp = $('#answer');
     if (inp.value === '') return;
     const val = parseInt(inp.value, 10), c = s.current;
@@ -182,6 +185,10 @@
       title.textContent = s.correct >= 25 ? 'Lightning fast!' : s.correct >= 12 ? 'Great speed round!' : 'Time\u2019s up!';
       sub.textContent = `You answered ${s.correct} correct in one minute.`;
       cells = [[s.correct, 'Correct'], [s.n ? pct + '%' : '–', 'Accuracy'], [s.best, 'Best streak']];
+    } else if (s.mode === 'div') {
+      title.textContent = pct === 100 ? 'Perfect long division!' : pct >= 80 ? 'Excellent work!' : 'Good practice!';
+      sub.textContent = `You solved ${s.solved} of ${DIV_PROBLEMS} problems.`;
+      cells = [[`${s.solved}/${DIV_PROBLEMS}`, 'Solved'], [pct + '%', 'Steps right first try'], [fmt(secs), 'Time'], [s.best, 'Best streak']];
     } else if (s.mode === 'round') {
       title.textContent = pct === 100 ? 'Perfect score!' : pct >= 85 ? 'Excellent!' : pct >= 60 ? 'Nice work!' : 'Good practice!';
       sub.textContent = s.missed.size ? 'Look over the facts below, then try again.' : 'Every single one right. Try more tables!';
@@ -204,6 +211,106 @@
     if (session) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; }
     if (session && session.mode === 'practice' && session.n) return finish();
     show('home');
+  }
+
+  // ---- long division ----
+  const DIV_PROBLEMS = 5;
+  function makeDiv(level) {
+    let v, n;
+    if (level === 'easy') { v = 2 + rand(8); n = v * (12 + rand(Math.floor(999 / v) - 11)); }
+    else if (level === 'medium') { v = 3 + rand(7); n = 200 + rand(7800); }
+    else { v = 11 + rand(39); n = 500 + rand(9500); }
+    const d = String(n).split('').map(Number), groups = [];
+    let rem = 0;
+    d.forEach((dig, i) => {
+      const cur = rem * 10 + dig, q = Math.floor(cur / v);
+      if (!groups.length && q === 0) { rem = cur; return; }
+      groups.push({ col: i, cur, q, prod: q * v, diff: cur - q * v });
+      rem = cur - q * v;
+    });
+    return { n, v, d, groups, gi: 0, phase: 'q', tries: 0, quotient: d.map(() => ''), rows: [] };
+  }
+  function startDiv(level) {
+    session = { kind: 'div', mode: 'div', level, tables: [], n: 0, correct: 0, streak: 0, best: 0, missed: new Map(),
+      startedAt: Date.now(), timer: null, locked: false, advance: null, ended: false, idx: 0, solved: 0, div: null };
+    const prog = $('#progress'); prog.classList.remove('timer', 'low');
+    $('#progressFill').style.width = '0';
+    $('#problem').hidden = true; $('#divBoard').hidden = false;
+    setStreak(0); show('quiz'); nextDivProblem();
+  }
+  function nextDivProblem() {
+    const s = session; if (!s || s.ended) return;
+    if (s.idx >= DIV_PROBLEMS) return finish();
+    s.div = makeDiv(s.level); s.idx++; s.locked = false;
+    const pct = Math.round((s.idx - 1) / DIV_PROBLEMS * 100);
+    $('#progressFill').style.width = pct + '%';
+    $('#progress').setAttribute('aria-valuenow', pct);
+    $('#progressLabel').textContent = `Problem ${s.idx} of ${DIV_PROBLEMS}`;
+    $('#feedback').className = 'feedback'; $('#feedback').textContent = '';
+    setKeypad(false); divAsk();
+  }
+  function divAsk() {
+    const p = session.div, g = p.groups[p.gi], v = p.v;
+    $('#divPrompt').textContent = p.phase === 'q' ? `Divide: how many times does ${v} go into ${g.cur}?`
+      : p.phase === 'm' ? `Multiply: ${g.q} × ${v}` : `Subtract: ${g.cur} − ${g.prod}`;
+    renderDiv();
+    const inp = $('#answer'); inp.value = ''; inp.disabled = false;
+    $('#qCard').className = 'question-card'; inp.focus({ preventScroll: true });
+  }
+  function renderDiv(done) {
+    const p = session.div, N = p.d.length, g = p.groups[p.gi], asking = !done && g;
+    const put = (str, end, o = {}) => p.d.map((_, k) => {
+      const idx = k - (end - str.length + 1), ch = idx >= 0 && idx < str.length ? str[idx] : '';
+      const cl = [o.under && ch ? 'un' : '', o.hi && ch && idx >= str.length - o.hi ? 'bd' : '', ch === '?' ? 'ask' : ''].join(' ');
+      return `<span class="${cl}">${ch}</span>`;
+    }).join('');
+    const row = (cls, cells, lead = '') => `<div class="ld-row ${cls}" style="--n:${N}"><span class="ld-lead">${lead}</span>${cells}</div>`;
+    const hlTo = asking ? g.col : -1, hlFrom = asking && p.gi === 0 ? 0 : hlTo;
+    const qAsk = k => asking && p.phase === 'q' && k === g.col;
+    let h = row('ld-q', p.d.map((_, k) => `<span class="${qAsk(k) ? 'ask' : ''}">${qAsk(k) ? '?' : p.quotient[k]}</span>`).join(''));
+    h += row('ld-div', p.d.map((x, k) => `<span class="dv${k >= hlFrom && k <= hlTo ? ' hl' : ''}">${x}</span>`).join(''), p.v);
+    p.rows.forEach(r => { h += row('', put(r.str, r.end, r)); });
+    if (asking && p.phase !== 'q') {
+      const L = String(p.phase === 'm' ? g.prod : g.diff).length;
+      h += row('', put('?'.repeat(L), g.col, { under: p.phase === 'm' }));
+    }
+    $('#ldBoard').innerHTML = h;
+  }
+  function submitDiv() {
+    const s = session, p = s.div, g = p.groups[p.gi], inp = $('#answer');
+    if (inp.value === '') return;
+    const ans = p.phase === 'q' ? g.q : p.phase === 'm' ? g.prod : g.diff;
+    const fb = $('#feedback'), card = $('#qCard');
+    if (parseInt(inp.value, 10) !== ans) {
+      s.streak = 0; setStreak(0); p.tries++;
+      card.className = 'question-card wrong'; fb.className = 'feedback wrong';
+      if (p.tries < 2) {
+        fb.textContent = p.phase === 'q' ? `Not quite. What is the biggest number of ${p.v}s that fits in ${g.cur}?` : 'Not quite. Try again.';
+        inp.value = ''; return;
+      }
+      fb.innerHTML = `<span>The answer is</span><span class="ans">${ans}</span>`;
+    } else {
+      fb.className = 'feedback right'; fb.textContent = CHEERS[rand(CHEERS.length)];
+      if (!p.tries) { s.correct++; s.streak++; s.best = Math.max(s.best, s.streak); setStreak(s.streak); }
+    }
+    s.n++; p.tries = 0;
+    if (p.phase === 'q') { p.quotient[g.col] = g.q; if (g.q === 0) return divGroupDone(); p.phase = 'm'; }
+    else if (p.phase === 'm') { p.rows.push({ str: String(g.prod), end: g.col, under: 1 }); p.phase = 's'; }
+    else return divGroupDone();
+    divAsk();
+  }
+  function divGroupDone() {
+    const s = session, p = s.div, g = p.groups[p.gi], nx = p.d[g.col + 1];
+    p.rows.push(nx === undefined ? { str: String(g.diff), end: g.col } : { str: (g.diff ? g.diff : '') + String(nx), end: g.col + 1, hi: 1 });
+    p.phase = 'q'; p.gi++;
+    if (p.gi < p.groups.length) return divAsk();
+    s.solved++; s.locked = true; s.waitingNext = true;
+    renderDiv(true);
+    $('#divPrompt').textContent = 'All done!';
+    $('#qCard').className = 'question-card right'; $('#feedback').className = 'feedback right';
+    $('#feedback').innerHTML = `<span>Solved!</span><span class="ans">${p.n} ÷ ${p.v} = ${p.quotient.join('')}${g.diff ? ' R ' + g.diff : ''}</span>`;
+    $('#answer').value = ''; $('#answer').disabled = true;
+    setKeypad(true, s.idx >= DIV_PROBLEMS ? 'Finish' : 'Next');
   }
 
   // ---- keypad ----
@@ -268,7 +375,10 @@
 
   // ---- wire up ----
   buildChips(); buildKeypad();
+  function syncKind() { const d = $('input[name=kind]:checked').value === 'div'; $('#mulSetup').hidden = d; $('#divSetup').hidden = !d; $('#startHint').textContent = ''; }
+  $$('input[name=kind]').forEach(i => i.addEventListener('change', syncKind));
   $('#startBtn').addEventListener('click', () => {
+    if ($('input[name=kind]:checked').value === 'div') return startDiv($('input[name=level]:checked').value);
     if (!selected.size) { $('#startHint').textContent = 'Pick at least one table first.'; return; }
     start([...selected].sort((a, b) => a - b), $('input[name=mode]:checked').value);
   });
@@ -276,7 +386,7 @@
   $('#homeBtn').addEventListener('click', () => { if (session) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } show('home'); });
   $('#mapBtn').addEventListener('click', () => { if (session && !session.ended) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } openMap(); });
   $('#mapBackBtn').addEventListener('click', () => show(lastView === 'quiz' ? 'home' : lastView));
-  $('#againBtn').addEventListener('click', () => start(session.tables, session.mode));
+  $('#againBtn').addEventListener('click', () => session.kind === 'div' ? startDiv(session.level) : start(session.tables, session.mode));
   $('#changeBtn').addEventListener('click', () => { syncChips(); show('home'); });
   $('#missedBtn').addEventListener('click', () => {
     // practice every table involved in the missed facts, weighted toward the misses

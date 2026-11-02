@@ -17,6 +17,8 @@
   }
 }
 *{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+.stack{display:flex;flex-direction:column;gap:20px}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--body);background:var(--bg);color:var(--ink);line-height:1.45;font-size:18px;min-height:100dvh;display:flex;flex-direction:column}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -154,3 +156,18 @@ h2{font-family:var(--display);font-weight:600;font-size:1.15rem}
   .btn.big{width:100%}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* long division */
+.ld-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.div-prompt{font-weight:800;font-size:1.1rem;min-height:1.5em}
+.ld{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,7vw,2.3rem);line-height:1;font-variant-numeric:tabular-nums}
+.ld-row{display:grid;grid-template-columns:1.6em repeat(var(--n),1.15em);height:1.3em;align-items:center;justify-content:center}
+.ld-row span{text-align:center;height:100%;display:flex;align-items:center;justify-content:center}
+.ld-row .ld-lead{justify-content:flex-end;padding-right:.25em;color:var(--accent)}
+.ld-div .ld-lead{border-right:3px solid var(--ink)}
+.ld-row .dv{border-top:3px solid var(--ink)}
+.ld-row .dv.hl{background:color-mix(in srgb,var(--indigo) 18%,transparent);border-radius:6px 6px 0 0}
+.ld-q span{color:var(--indigo)}
+.ld-row .un{border-bottom:3px solid var(--ink)}
+.ld-row .bd{color:var(--accent)}
+.ld-row .ask{color:var(--accent);background:var(--surface-2);border-radius:6px}
