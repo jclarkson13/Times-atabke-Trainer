@@ -41,6 +41,7 @@
       <div class="modes" role="radiogroup" aria-label="Activity">
         <label class="mode"><input type="radio" name="kind" value="mul" checked><span class="mode-body"><span class="mode-icon" aria-hidden="true">&times;</span><span><strong>Times tables</strong><small>Quick facts from 0 to 12.</small></span></span></label>
         <label class="mode"><input type="radio" name="kind" value="div"><span class="mode-body"><span class="mode-icon" aria-hidden="true">&divide;</span><span><strong>Long division</strong><small>Divide, multiply, subtract, bring down.</small></span></span></label>
+        <label class="mode"><input type="radio" name="kind" value="geo"><span class="mode-body"><span class="mode-icon" aria-hidden="true">&#9645;</span><span><strong>Perimeter &amp; area</strong><small>Rectangles, triangles, and L-shapes.</small></span></span></label>
       </div>
     </div>
 
@@ -94,6 +95,16 @@
         <label class="mode"><input type="radio" name="level" value="easy" checked><span class="mode-body"><span class="mode-icon" aria-hidden="true">1</span><span><strong>Easy</strong><small>1-digit divisor, no remainders.</small></span></span></label>
         <label class="mode"><input type="radio" name="level" value="medium"><span class="mode-body"><span class="mode-icon" aria-hidden="true">R</span><span><strong>Medium</strong><small>Bigger numbers, with remainders.</small></span></span></label>
         <label class="mode"><input type="radio" name="level" value="hard"><span class="mode-body"><span class="mode-icon" aria-hidden="true">2</span><span><strong>Hard</strong><small>2-digit divisors.</small></span></span></label>
+      </div>
+    </div>
+
+    <div class="card" id="geoSetup" hidden>
+      <h2>Pick a level</h2>
+      <p class="sub small">10 questions. Find the perimeter or area of the shape.</p>
+      <div class="modes" role="radiogroup" aria-label="Perimeter and area level">
+        <label class="mode"><input type="radio" name="glevel" value="easy" checked><span class="mode-body"><span class="mode-icon" aria-hidden="true">1</span><span><strong>Easy</strong><small>Rectangles and squares, sides up to 10.</small></span></span></label>
+        <label class="mode"><input type="radio" name="glevel" value="medium"><span class="mode-body"><span class="mode-icon" aria-hidden="true">2</span><span><strong>Medium</strong><small>Bigger sides, plus right triangles.</small></span></span></label>
+        <label class="mode"><input type="radio" name="glevel" value="hard"><span class="mode-body"><span class="mode-icon" aria-hidden="true">3</span><span><strong>Hard</strong><small>L-shapes and missing sides.</small></span></span></label>
       </div>
     </div>
 

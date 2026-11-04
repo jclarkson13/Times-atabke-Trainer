@@ -171,3 +171,9 @@ h2{font-family:var(--display);font-weight:600;font-size:1.15rem}
 .ld-row .un{border-bottom:3px solid var(--ink)}
 .ld-row .bd{color:var(--accent)}
 .ld-row .ask{color:var(--accent);background:var(--surface-2);border-radius:6px}
+
+/* perimeter & area */
+.ld svg{display:block;width:100%;max-width:340px;height:auto}
+.gs{fill:color-mix(in srgb,var(--indigo) 14%,transparent);stroke:var(--indigo);stroke-width:3;stroke-linejoin:round}
+.gl{fill:none;stroke:var(--indigo);stroke-width:2}
+.gt{font:700 17px var(--display);fill:var(--ink)}

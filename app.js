@@ -108,6 +108,7 @@
     const s = session; if (!s || s.ended) return;
     clearTimeout(s.advance);
     if (s.kind === 'div') return nextDivProblem();
+    if (s.kind === 'geo') return nextGeo();
     if (s.mode === 'round' && s.n >= ROUND_LEN) return finish();
     const f = pickFact();
     // random order of factors so kids see both 3x7 and 7x3
@@ -145,6 +146,7 @@
     const s = session; if (!s || s.ended) return;
     if (s.locked) { if (s.waitingNext) { s.waitingNext = false; nextQuestion(); } return; }
     if (s.kind === 'div') return submitDiv();
+    if (s.kind === 'geo') return submitGeo();
     const inp = $('#answer');
     if (inp.value === '') return;
     const val = parseInt(inp.value, 10), c = s.current;
@@ -185,6 +187,10 @@
       title.textContent = s.correct >= 25 ? 'Lightning fast!' : s.correct >= 12 ? 'Great speed round!' : 'Time\u2019s up!';
       sub.textContent = `You answered ${s.correct} correct in one minute.`;
       cells = [[s.correct, 'Correct'], [s.n ? pct + '%' : '–', 'Accuracy'], [s.best, 'Best streak']];
+    } else if (s.mode === 'geo') {
+      title.textContent = pct === 100 ? 'Perfect score!' : pct >= 80 ? 'Excellent work!' : 'Good practice!';
+      sub.textContent = `You got ${s.correct} of ${GEO_QS} right on the first try.`;
+      cells = [[GEO_QS, 'Questions'], [pct + '%', 'Right first try'], [fmt(secs), 'Time'], [s.best, 'Best streak']];
     } else if (s.mode === 'div') {
       title.textContent = pct === 100 ? 'Perfect long division!' : pct >= 80 ? 'Excellent work!' : 'Good practice!';
       sub.textContent = `You solved ${s.solved} of ${DIV_PROBLEMS} problems.`;
@@ -313,6 +319,74 @@
     setKeypad(true, s.idx >= DIV_PROBLEMS ? 'Finish' : 'Next');
   }
 
+  // ---- perimeter & area ----
+  const GEO_QS = 10;
+  function makeGeo(level) {
+    const r = (a, b) => a + rand(b - a + 1), ask = rand(2) ? 'area' : 'perimeter', max = level === 'easy' ? 10 : 20;
+    const T = (x, y, t, an = 'middle') => `<text x="${x}" y="${y}" class="gt" text-anchor="${an}">${t}</text>`;
+    const svg = (inner, label) => `<svg viewBox="0 0 280 180" role="img" aria-label="${label}">${inner}</svg>`;
+    const pick = level === 'easy' ? 0 : level === 'medium' ? rand(2) : rand(4);
+    if (pick === 0 || pick === 3) {
+      const w = r(2, max), sq = pick === 0 && rand(4) === 0, h = sq ? w : r(2, max), miss = pick === 3;
+      const s = Math.min(160 / w, 100 / h), W = w * s, H = h * s, x = (280 - W) / 2, y = (150 - H) / 2 + 5;
+      const body = `<rect x="${x}" y="${y}" width="${W}" height="${H}" class="gs"/>` + T(x + W / 2, y + H + 22, w) + T(x + W + 8, y + H / 2 + 6, miss ? '?' : h, 'start');
+      if (miss) return { svg: svg(body, 'Rectangle with one missing side'), prompt: `The perimeter is ${2 * (w + h)} and the length is ${w}. Find the missing side.`, ans: h, hint: 'Half the perimeter is length + width.' };
+      return { svg: svg(body, `${sq ? 'Square' : 'Rectangle'} ${w} by ${h}`), prompt: `${sq ? 'Square' : 'Rectangle'}: what is the ${ask}?`,
+        ans: ask === 'area' ? w * h : 2 * (w + h), hint: ask === 'area' ? 'Area = length × width.' : 'Add all four sides.' };
+    }
+    if (pick === 1) {
+      let b, h, c;
+      if (ask === 'area') { b = r(2, 12); h = r(2, 12); if (b * h % 2) h++; }
+      else { const k = r(1, 3); b = 3 * k; h = 4 * k; c = 5 * k; }
+      const s = Math.min(160 / b, 100 / h), W = b * s, H = h * s, x = (280 - W) / 2, y = (150 - H) / 2 + 5;
+      const body = `<path d="M${x} ${y + H}H${x + W}L${x} ${y}Z" class="gs"/><path d="M${x + 12} ${y + H}v-12H${x}" class="gl"/>`
+        + T(x + W / 2, y + H + 22, b) + T(x - 8, y + H / 2 + 6, h, 'end') + (ask === 'perimeter' ? T(x + W / 2 + 8, y + H / 2 - 4, c, 'start') : '');
+      return { svg: svg(body, `Right triangle with base ${b} and height ${h}`), prompt: `Right triangle: what is the ${ask}?`,
+        ans: ask === 'area' ? b * h / 2 : b + h + c, hint: ask === 'area' ? 'Area = base × height ÷ 2.' : 'Add the three sides.' };
+    }
+    const W = r(6, 12), H = r(6, 12), cw = r(3, W - 3), ch = r(3, H - 3);
+    const s = Math.min(150 / W, 100 / H), x = (280 - W * s) / 2, y = 26, u = (p, q) => `${x + p * s} ${y + q * s}`;
+    const body = `<path d="M${u(0, 0)}L${u(W - cw, 0)}L${u(W - cw, ch)}L${u(W, ch)}L${u(W, H)}L${u(0, H)}Z" class="gs"/>`
+      + T(x + (W - cw) * s / 2, y - 7, W - cw) + T(x + (W - cw) * s - 7, y + ch * s / 2 + 6, ch, 'end') + T(x + (W - cw / 2) * s, y + ch * s - 7, cw)
+      + T(x + W * s + 8, y + (ch + H) * s / 2 + 6, H - ch, 'start') + T(x + W * s / 2, y + H * s + 22, W) + T(x - 8, y + H * s / 2 + 6, H, 'end');
+    return { svg: svg(body, 'L-shape with all sides labeled'), prompt: `L-shape: what is the ${ask}?`, ans: ask === 'area' ? W * H - cw * ch : 2 * (W + H),
+      hint: ask === 'area' ? 'Split it into rectangles, or take the missing corner away.' : 'Add up all six sides.' };
+  }
+  function startGeo(level) {
+    session = { kind: 'geo', mode: 'geo', level, tables: [], n: 0, correct: 0, streak: 0, best: 0, missed: new Map(),
+      startedAt: Date.now(), timer: null, locked: false, advance: null, ended: false, idx: 0, tries: 0, geo: null };
+    $('#progress').classList.remove('timer', 'low'); $('#progressFill').style.width = '0';
+    $('#problem').hidden = true; $('#divBoard').hidden = false;
+    setStreak(0); show('quiz'); nextGeo();
+  }
+  function nextGeo() {
+    const s = session; if (!s || s.ended) return;
+    if (s.idx >= GEO_QS) return finish();
+    s.geo = makeGeo(s.level); s.idx++; s.tries = 0; s.locked = false;
+    const pct = Math.round((s.idx - 1) / GEO_QS * 100);
+    $('#progressFill').style.width = pct + '%'; $('#progress').setAttribute('aria-valuenow', pct);
+    $('#progressLabel').textContent = `Question ${s.idx} of ${GEO_QS}`;
+    $('#feedback').className = 'feedback'; $('#feedback').textContent = '';
+    $('#divPrompt').textContent = s.geo.prompt; $('#ldBoard').innerHTML = s.geo.svg;
+    $('#qCard').className = 'question-card'; setKeypad(false);
+    const inp = $('#answer'); inp.value = ''; inp.disabled = false; inp.focus({ preventScroll: true });
+  }
+  function submitGeo() {
+    const s = session, g = s.geo, inp = $('#answer'), fb = $('#feedback'), card = $('#qCard');
+    if (inp.value === '') return;
+    if (parseInt(inp.value, 10) !== g.ans) {
+      s.streak = 0; setStreak(0); s.tries++;
+      card.className = 'question-card wrong'; fb.className = 'feedback wrong';
+      if (s.tries < 2) { fb.textContent = 'Not quite. ' + g.hint; inp.value = ''; return; }
+      fb.innerHTML = `<span>The answer is</span><span class="ans">${g.ans}</span>`;
+    } else {
+      card.className = 'question-card right'; fb.className = 'feedback right'; fb.textContent = CHEERS[rand(CHEERS.length)];
+      if (!s.tries) { s.correct++; s.streak++; s.best = Math.max(s.best, s.streak); setStreak(s.streak); }
+    }
+    s.n++; s.locked = true; s.waitingNext = true; inp.disabled = true;
+    setKeypad(true, s.idx >= GEO_QS ? 'Finish' : 'Next');
+  }
+
   // ---- keypad ----
   function buildKeypad() {
     const kp = $('#keypad');
@@ -375,10 +449,12 @@
 
   // ---- wire up ----
   buildChips(); buildKeypad();
-  function syncKind() { const d = $('input[name=kind]:checked').value === 'div'; $('#mulSetup').hidden = d; $('#divSetup').hidden = !d; $('#startHint').textContent = ''; }
+  function syncKind() { const k = $('input[name=kind]:checked').value; $('#mulSetup').hidden = k !== 'mul'; $('#divSetup').hidden = k !== 'div'; $('#geoSetup').hidden = k !== 'geo'; $('#startHint').textContent = ''; }
   $$('input[name=kind]').forEach(i => i.addEventListener('change', syncKind));
+  syncKind(); window.addEventListener('pageshow', syncKind);
   $('#startBtn').addEventListener('click', () => {
     if ($('input[name=kind]:checked').value === 'div') return startDiv($('input[name=level]:checked').value);
+    if ($('input[name=kind]:checked').value === 'geo') return startGeo($('input[name=glevel]:checked').value);
     if (!selected.size) { $('#startHint').textContent = 'Pick at least one table first.'; return; }
     start([...selected].sort((a, b) => a - b), $('input[name=mode]:checked').value);
   });
@@ -386,7 +462,7 @@
   $('#homeBtn').addEventListener('click', () => { if (session) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } show('home'); });
   $('#mapBtn').addEventListener('click', () => { if (session && !session.ended) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } openMap(); });
   $('#mapBackBtn').addEventListener('click', () => show(lastView === 'quiz' ? 'home' : lastView));
-  $('#againBtn').addEventListener('click', () => session.kind === 'div' ? startDiv(session.level) : start(session.tables, session.mode));
+  $('#againBtn').addEventListener('click', () => session.kind === 'div' ? startDiv(session.level) : session.kind === 'geo' ? startGeo(session.level) : start(session.tables, session.mode));
   $('#changeBtn').addEventListener('click', () => { syncChips(); show('home'); });
   $('#missedBtn').addEventListener('click', () => {
     // practice every table involved in the missed facts, weighted toward the misses
