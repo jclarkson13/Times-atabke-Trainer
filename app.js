@@ -253,6 +253,7 @@
     $('#progress').setAttribute('aria-valuenow', pct);
     $('#progressLabel').textContent = `Problem ${s.idx} of ${DIV_PROBLEMS}`;
     $('#feedback').className = 'feedback'; $('#feedback').textContent = '';
+    $('#formula').hidden = true;
     setKeypad(false); divAsk();
   }
   function divAsk() {
@@ -330,9 +331,9 @@
       const w = r(2, max), sq = pick === 0 && rand(4) === 0, h = sq ? w : r(2, max), miss = pick === 3;
       const s = Math.min(160 / w, 100 / h), W = w * s, H = h * s, x = (280 - W) / 2, y = (150 - H) / 2 + 5;
       const body = `<rect x="${x}" y="${y}" width="${W}" height="${H}" class="gs"/>` + T(x + W / 2, y + H + 22, w) + T(x + W + 8, y + H / 2 + 6, miss ? '?' : h, 'start');
-      if (miss) return { svg: svg(body, 'Rectangle with one missing side'), prompt: `The perimeter is ${2 * (w + h)} and the length is ${w}. Find the missing side.`, ans: h, hint: 'Half the perimeter is length + width.' };
+      if (miss) return { svg: svg(body, 'Rectangle with one missing side'), prompt: `The perimeter is ${2 * (w + h)} and the length is ${w}. Find the missing side.`, ans: h, hint: 'Half the perimeter is length + width.', formula: 'Perimeter = L + L + W + W' };
       return { svg: svg(body, `${sq ? 'Square' : 'Rectangle'} ${w} by ${h}`), prompt: `${sq ? 'Square' : 'Rectangle'}: what is the ${ask}?`,
-        ans: ask === 'area' ? w * h : 2 * (w + h), hint: ask === 'area' ? 'Area = length × width.' : 'Add all four sides.' };
+        ans: ask === 'area' ? w * h : 2 * (w + h), hint: ask === 'area' ? 'Area = length × width.' : 'Add all four sides.', formula: ask === 'area' ? 'Area = L × W' : 'Perimeter = L + L + W + W' };
     }
     if (pick === 1) {
       let b, h, c;
@@ -342,7 +343,7 @@
       const body = `<path d="M${x} ${y + H}H${x + W}L${x} ${y}Z" class="gs"/><path d="M${x + 12} ${y + H}v-12H${x}" class="gl"/>`
         + T(x + W / 2, y + H + 22, b) + T(x - 8, y + H / 2 + 6, h, 'end') + (ask === 'perimeter' ? T(x + W / 2 + 8, y + H / 2 - 4, c, 'start') : '');
       return { svg: svg(body, `Right triangle with base ${b} and height ${h}`), prompt: `Right triangle: what is the ${ask}?`,
-        ans: ask === 'area' ? b * h / 2 : b + h + c, hint: ask === 'area' ? 'Area = base × height ÷ 2.' : 'Add the three sides.' };
+        ans: ask === 'area' ? b * h / 2 : b + h + c, hint: ask === 'area' ? 'Area = base × height ÷ 2.' : 'Add the three sides.', formula: ask === 'area' ? 'Area = B × H ÷ 2' : 'Perimeter = side + side + side' };
     }
     const W = r(6, 12), H = r(6, 12), cw = r(3, W - 3), ch = r(3, H - 3);
     const s = Math.min(150 / W, 100 / H), x = (280 - W * s) / 2, y = 26, u = (p, q) => `${x + p * s} ${y + q * s}`;
@@ -350,10 +351,10 @@
       + T(x + (W - cw) * s / 2, y - 7, W - cw) + T(x + (W - cw) * s - 7, y + ch * s / 2 + 6, ch, 'end') + T(x + (W - cw / 2) * s, y + ch * s - 7, cw)
       + T(x + W * s + 8, y + (ch + H) * s / 2 + 6, H - ch, 'start') + T(x + W * s / 2, y + H * s + 22, W) + T(x - 8, y + H * s / 2 + 6, H, 'end');
     return { svg: svg(body, 'L-shape with all sides labeled'), prompt: `L-shape: what is the ${ask}?`, ans: ask === 'area' ? W * H - cw * ch : 2 * (W + H),
-      hint: ask === 'area' ? 'Split it into rectangles, or take the missing corner away.' : 'Add up all six sides.' };
+      hint: ask === 'area' ? 'Split it into rectangles, or take the missing corner away.' : 'Add up all six sides.', formula: ask === 'area' ? 'Area = (L × W) + (L × W)' : 'Perimeter = add all six sides' };
   }
-  function startGeo(level) {
-    session = { kind: 'geo', mode: 'geo', level, tables: [], n: 0, correct: 0, streak: 0, best: 0, missed: new Map(),
+  function startGeo(level, formulas) {
+    session = { kind: 'geo', mode: 'geo', level, formulas, tables: [], n: 0, correct: 0, streak: 0, best: 0, missed: new Map(),
       startedAt: Date.now(), timer: null, locked: false, advance: null, ended: false, idx: 0, tries: 0, geo: null };
     $('#progress').classList.remove('timer', 'low'); $('#progressFill').style.width = '0';
     $('#problem').hidden = true; $('#divBoard').hidden = false;
@@ -368,6 +369,7 @@
     $('#progressLabel').textContent = `Question ${s.idx} of ${GEO_QS}`;
     $('#feedback').className = 'feedback'; $('#feedback').textContent = '';
     $('#divPrompt').textContent = s.geo.prompt; $('#ldBoard').innerHTML = s.geo.svg;
+    $('#formula').textContent = s.geo.formula; $('#formula').hidden = !s.formulas;
     $('#qCard').className = 'question-card'; setKeypad(false);
     const inp = $('#answer'); inp.value = ''; inp.disabled = false; inp.focus({ preventScroll: true });
   }
@@ -454,7 +456,7 @@
   syncKind(); window.addEventListener('pageshow', syncKind);
   $('#startBtn').addEventListener('click', () => {
     if ($('input[name=kind]:checked').value === 'div') return startDiv($('input[name=level]:checked').value);
-    if ($('input[name=kind]:checked').value === 'geo') return startGeo($('input[name=glevel]:checked').value);
+    if ($('input[name=kind]:checked').value === 'geo') return startGeo($('input[name=glevel]:checked').value, $('#showFormulas').checked);
     if (!selected.size) { $('#startHint').textContent = 'Pick at least one table first.'; return; }
     start([...selected].sort((a, b) => a - b), $('input[name=mode]:checked').value);
   });
@@ -462,7 +464,7 @@
   $('#homeBtn').addEventListener('click', () => { if (session) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } show('home'); });
   $('#mapBtn').addEventListener('click', () => { if (session && !session.ended) { clearInterval(session.timer); clearTimeout(session.advance); session.ended = true; } openMap(); });
   $('#mapBackBtn').addEventListener('click', () => show(lastView === 'quiz' ? 'home' : lastView));
-  $('#againBtn').addEventListener('click', () => session.kind === 'div' ? startDiv(session.level) : session.kind === 'geo' ? startGeo(session.level) : start(session.tables, session.mode));
+  $('#againBtn').addEventListener('click', () => session.kind === 'div' ? startDiv(session.level) : session.kind === 'geo' ? startGeo(session.level, session.formulas) : start(session.tables, session.mode));
   $('#changeBtn').addEventListener('click', () => { syncChips(); show('home'); });
   $('#missedBtn').addEventListener('click', () => {
     // practice every table involved in the missed facts, weighted toward the misses

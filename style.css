@@ -177,3 +177,6 @@ h2{font-family:var(--display);font-weight:600;font-size:1.15rem}
 .gs{fill:color-mix(in srgb,var(--indigo) 14%,transparent);stroke:var(--indigo);stroke-width:3;stroke-linejoin:round}
 .gl{fill:none;stroke:var(--indigo);stroke-width:2}
 .gt{font:700 17px var(--display);fill:var(--ink)}
+.formula{font-weight:800;font-size:.95rem;color:var(--indigo);background:color-mix(in srgb,var(--indigo) 10%,transparent);padding:6px 14px;border-radius:999px;text-align:center}
+.check{display:flex;gap:10px;align-items:center;font-weight:700;margin-top:14px}
+.check input{width:20px;height:20px;accent-color:var(--indigo)}

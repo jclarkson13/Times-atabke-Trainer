@@ -106,6 +106,7 @@
         <label class="mode"><input type="radio" name="glevel" value="medium"><span class="mode-body"><span class="mode-icon" aria-hidden="true">2</span><span><strong>Medium</strong><small>Bigger sides, plus right triangles.</small></span></span></label>
         <label class="mode"><input type="radio" name="glevel" value="hard"><span class="mode-body"><span class="mode-icon" aria-hidden="true">3</span><span><strong>Hard</strong><small>L-shapes and missing sides.</small></span></span></label>
       </div>
+      <label class="check"><input type="checkbox" id="showFormulas" checked> Show formula reminders</label>
     </div>
 
     <div class="start-row">
@@ -127,7 +128,7 @@
 
     <div class="question-card" id="qCard">
       <div class="problem" id="problem" aria-live="polite"><span id="qa">7</span><span class="times" aria-hidden="true">&times;</span><span class="sr"> times </span><span id="qb">8</span><span class="eq" aria-hidden="true">=</span><span class="sr"> equals </span></div>
-      <div class="ld-wrap" id="divBoard" hidden><p class="div-prompt" id="divPrompt" aria-live="polite"></p><div class="ld" id="ldBoard"></div></div>
+      <div class="ld-wrap" id="divBoard" hidden><p class="div-prompt" id="divPrompt" aria-live="polite"></p><p class="formula" id="formula" hidden></p><div class="ld" id="ldBoard"></div></div>
       <input id="answer" class="answer" type="text" inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" maxlength="3" aria-label="Your answer" placeholder="?">
       <div class="feedback" id="feedback" role="status" aria-live="assertive"></div>
     </div>
